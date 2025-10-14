@@ -1,0 +1,5 @@
+bandit
+black
+pytest-cov
+flake8
+pip-audit
