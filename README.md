@@ -1,11 +1,12 @@
 # ANPR Project
-An Automatic Number Plate Recognition (ANPR) system built using Python and various image processing libraries.
+An Automatic Number Plate Recognition (ANPR) system built using Python and for Image Processing and Machine Learning
 
 ## 🔧 Tech Stack
 - **Python 3.13 - Primary programming language**
     -   **Pytest - Test Driven Development (TDD)**
     -   **matplotlib - Image processing and visualization**
     -   **scikit-image - Image processing**
+    -   **scikit-learn - Machine Learning algorithms**
     -   **numpy - Numerical computations**
 - **Github - Repository management, CI/CD (Github-Actions)**
 
