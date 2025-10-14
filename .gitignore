@@ -1,3 +1,7 @@
 venv
 car_images
 car.jpg
+.coverage
+*.pytest_cache
+*__pycache__
+reports
