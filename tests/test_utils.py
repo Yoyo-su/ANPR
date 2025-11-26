@@ -1,7 +1,7 @@
 import pytest
 import numpy
 from src.utils.localisation import convert_images
-from src.utils.cca import connected_component_analysis
+from src.utils.cca import draw_bounding_box
 
 
 @pytest.mark.describe("Tests for convert_images function")
@@ -24,30 +24,25 @@ class TestConvertImages:
             convert_images("tests/data/test_image.txt")
 
 
-@pytest.mark.describe("Tests for connected_component_analysis function")
+@pytest.mark.describe("Tests for draw_bounding_box function")
 class TestConnectedComponentAnalysis:
     @pytest.mark.it(
-        "Test connected_component_analysis function with valid binary and grayscale images"
+        "Test draw_bounding_box function with valid binary and grayscale images"
     )
-    def test_connected_component_analysis_valid_images(self):
+    def test_draw_bounding_box_valid_images(self):
         binary_image, gray_image = convert_images("tests/data/test_image.jpg")
-        try:
-            connected_component_analysis(binary_image, gray_image)
-        except Exception as e:
-            pytest.fail(f"connected_component_analysis raised an exception: {e}")
+        result = draw_bounding_box(binary_image, gray_image)
+        assert isinstance(result, list)
+        assert all(isinstance(arr, numpy.ndarray) for arr in result)
 
-    @pytest.mark.it(
-        "Test connected_component_analysis function with invalid binary image"
-    )
-    def test_connected_component_analysis_invalid_binary_image(self):
+    @pytest.mark.it("Test draw_bounding_box function with invalid binary image")
+    def test_draw_bounding_box_invalid_binary_image(self):
         _, gray_image = convert_images("tests/data/test_image.jpg")
         with pytest.raises(Exception):
-            connected_component_analysis(None, gray_image)
+            draw_bounding_box(None, gray_image)
 
-    @pytest.mark.it(
-        "Test connected_component_analysis function with invalid grayscale image"
-    )
-    def test_connected_component_analysis_invalid_grayscale_image(self):
+    @pytest.mark.it("Test draw_bounding_box function with invalid grayscale image")
+    def test_draw_bounding_box_invalid_grayscale_image(self):
         binary_image, _ = convert_images("tests/data/test_image.jpg")
         with pytest.raises(Exception):
-            connected_component_analysis(binary_image, None)
+            draw_bounding_box(binary_image, None)
