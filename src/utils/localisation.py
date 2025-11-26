@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 
 def convert_images(image_file):
-    """This function reads an image from the given file path,
+    """Reads an image from the given file path,
     converts it to grayscale and binary formats and returns both images as a tuple.
 
     Args:
