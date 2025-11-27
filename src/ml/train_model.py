@@ -6,6 +6,7 @@ import joblib
 from skimage.io import imread
 from skimage.filters import threshold_otsu
 from skimage.transform import resize
+from skimage.feature import hog
 
 
 letters = [
@@ -14,7 +15,7 @@ letters = [
             'U', 'V', 'W', 'X', 'Y', 'Z'
         ]
 
-target_size = (40, 40)  # each character image will be resized to 20x20 pixels
+target_size = (40, 40)  # each character image will be resized to 40x40 pixels
 
 
 def read_training_data(training_directory):
@@ -23,10 +24,7 @@ def read_training_data(training_directory):
     sub_dirs = os.listdir(training_directory)
     for sub_dir in sub_dirs:
         for each_letter in letters:
-            for each in range(20):
-            
-
-
+            for each in range(100):
                 image_path = os.path.join(training_directory, sub_dir, each_letter, each_letter + '_' + str(each) + '.jpg')
                 # read each image of each character
                 img_details = imread(image_path, as_gray=True,)
@@ -34,14 +32,18 @@ def read_training_data(training_directory):
                 resized_image = resize(img_details, target_size, anti_aliasing=True, preserve_range=True)
                 # converts each character image to binary image
                 binary_image = resized_image < threshold_otsu(resized_image)
-                # the 2D array of each image is flattened because the machine learning
-                # classifier requires that each sample is a 1D array
-                # therefore the 20*20 image becomes 1*400
-                # in machine learning terms that's 400 features with each pixel
-                # representing a feature
-                flat_bin_image = binary_image.reshape(-1)
-                image_data.append(flat_bin_image)
-                target_data.append(each_letter)
+                # extract Histogram of Oriented Gradients features to capture stroke direction/shape of character
+                hog_features = hog(
+                    binary_image.astype("float32"),
+                    orientations=9,
+                    pixels_per_cell=(4, 4),
+                    cells_per_block=(2, 2),
+                    block_norm="L2-Hys",
+                    visualize=False,
+                    feature_vector=True,
+                )
+                image_data.append(hog_features) # append the hog features to image data
+                target_data.append(each_letter) # append the corresponding label to target data
 
     return (np.array(image_data), np.array(target_data))
 
@@ -67,9 +69,10 @@ image_data, target_data = read_training_data(training_dataset_dir)
 # the kernel can be 'linear', 'poly' or 'rbf'
 # the probability was set to True so as to show
 # how sure the model is of it's prediction
-svc_model = SVC(kernel='linear', probability=True)    
 
-cross_validation(svc_model, 4, image_data, target_data)
+# SVC model has been tuned to give better accuracy with the following parameters
+svc_model = SVC(kernel='rbf', C=10, gamma=0.001, probability=True, class_weight='balanced')    
+cross_validation(svc_model, 5, image_data, target_data)
 
 # let's train the model with all the input data
 svc_model.fit(image_data, target_data)
