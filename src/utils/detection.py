@@ -187,7 +187,7 @@ def segment_characters(license_plate):
     character_dimensions = (
         0.35 * license_plate.shape[0],
         0.75 * license_plate.shape[0],
-        0.05 * license_plate.shape[1],
+        0.03 * license_plate.shape[1],
         0.18 * license_plate.shape[1],
     )
     min_height, max_height, min_width, max_width = character_dimensions
@@ -200,17 +200,29 @@ def segment_characters(license_plate):
         region_height = y1 - y0
         region_width = x1 - x0
 
+        # ensuring that the region identified satisfies the condition of a typical character
         if (
             region_height > min_height
             and region_height < max_height
             and region_width > min_width
             and region_width < max_width
-        ):
-            roi = license_plate[y0:y1, x0:x1]
+        ): 
+            pad_y = max(1, int(0.15 * region_height)) # add padding to the character region
+            pad_x = max(1, int(0.2 * region_width)) 
+            y0_pad = max(0, y0 - pad_y) 
+            y1_pad = min(license_plate.shape[0], y1 + pad_y)
+            x0_pad = max(0, x0 - pad_x)
+            x1_pad = min(license_plate.shape[1], x1 + pad_x)
+            roi = license_plate[y0_pad:y1_pad, x0_pad:x1_pad] # region of interest
 
             # draw a red bordered rectangle over the character.
             rect_border = patches.Rectangle(
-                (x0, y0), x1 - x0, y1 - y0, edgecolor="red", linewidth=2, fill=False
+                (x0_pad, y0_pad),
+                x1_pad - x0_pad,
+                y1_pad - y0_pad,
+                edgecolor="red",
+                linewidth=2,
+                fill=False,
             )
             ax1.add_patch(rect_border)
 
