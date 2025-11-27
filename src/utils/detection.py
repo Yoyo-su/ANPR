@@ -2,6 +2,7 @@ import numpy as np
 from skimage.transform import resize
 from skimage import measure
 from skimage.measure import regionprops
+from skimage import morphology
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 from skimage.io import imread
@@ -176,10 +177,12 @@ def segment_characters(license_plate):
     and resize them to a standard size for further processing.
     """
 
-    labelled_plate = measure.label(license_plate)
+    # remove small bright artifacts (e.g. screws) by applying a morphological opening
+    cleaned_plate = morphology.opening(license_plate, morphology.disk(3))
+    labelled_plate = measure.label(cleaned_plate)
 
     fig, ax1 = plt.subplots(1)
-    ax1.imshow(license_plate, cmap="gray")
+    ax1.imshow(cleaned_plate, cmap="gray")
     # the next two lines is based on the assumptions that the width of
     # a characters should be between 5% and 15% of the license plate,
     # and height should be between 35% and 75%
