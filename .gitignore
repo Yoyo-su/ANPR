@@ -1,7 +1,11 @@
 venv
-car_images
+car_images/*
 car.jpg
 .coverage
 *.pytest_cache
 *__pycache__
 reports
+scripts
+*obsolete*
+src/ml/training_data/*
+svc.pkl
