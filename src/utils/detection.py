@@ -4,6 +4,41 @@ from skimage import measure
 from skimage.measure import regionprops
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
+from skimage.io import imread
+from skimage.filters import threshold_otsu
+
+
+def convert_images(image_file):
+    """Reads an image from the given file path,
+    converts it to grayscale and binary formats and returns both images as a tuple.
+
+    Args:
+        image_file (str)): Path to the image file.
+    Returns:
+        tuple: A tuple containing the binary image and the grayscale image.
+
+    """
+
+    try:
+        car_image = imread(image_file, as_gray=True)
+
+        # the next line is not compulsory however, a grey scale pixel
+        # in skimage ranges between 0 & 1. multiplying it with 255
+        # will make it range between 0 & 255 (something we can relate better with
+
+        gray_car_image = car_image * 255
+        fig, (ax1, ax2) = plt.subplots(1, 2)  # 1 row, 2 columns
+        ax1.imshow(gray_car_image, cmap="gray")
+        threshold_value = threshold_otsu(gray_car_image)
+        binary_car_image = (
+            gray_car_image > threshold_value
+        )  # Evaluates True(white) or False(black)
+        ax2.imshow(binary_car_image, cmap="gray")
+        # plt.show()
+        return binary_car_image, gray_car_image
+    except Exception as e:
+        print(f"Error in reading the image from {image_file}")
+        raise (e)
 
 
 def draw_bounding_box(binary_car_image, gray_car_image):
@@ -137,9 +172,8 @@ def select_plate_using_vertical_projection(plate_like_objects):
 
 def segment_characters(license_plate):
     """
-    Segment characters from the detected license plate. The input can either be
-    the list of plate-like objects (in which case the best candidate will be
-    selected internally) or the already selected/inverted license plate array.
+    Segment characters from the detected license plate. Draw bounding boxes around each character
+    and resize them to a standard size for further processing.
     """
 
     labelled_plate = measure.label(license_plate)
@@ -148,13 +182,13 @@ def segment_characters(license_plate):
     ax1.imshow(license_plate, cmap="gray")
     # the next two lines is based on the assumptions that the width of
     # a characters should be between 5% and 15% of the license plate,
-    # and height should be between 35% and 60%
+    # and height should be between 35% and 75%
     # this will eliminate some
     character_dimensions = (
         0.35 * license_plate.shape[0],
-        0.60 * license_plate.shape[0],
+        0.75 * license_plate.shape[0],
         0.05 * license_plate.shape[1],
-        0.15 * license_plate.shape[1],
+        0.18 * license_plate.shape[1],
     )
     min_height, max_height, min_width, max_width = character_dimensions
 
@@ -181,10 +215,11 @@ def segment_characters(license_plate):
             ax1.add_patch(rect_border)
 
             # resize the characters to 20X20 and then append each character into the characters list
-            resized_char = resize(roi, (20, 20))
+            resized_char = resize(roi, (40, 40))
             characters.append(resized_char)
 
             # this is just to keep track of the arrangement of the characters
             column_list.append(x0)
-
+            
+    return characters, column_list
     # plt.show()
