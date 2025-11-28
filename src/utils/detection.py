@@ -171,6 +171,32 @@ def select_plate_using_vertical_projection(plate_like_objects):
     return best_plate
 
 
+def _split_wide_region(region, width_threshold):
+    """
+    If a region is too wide (likely around two characters), split it by finding
+    local minima in the vertical projection profile and slicing at those valleys.
+    """
+    projection = region.sum(axis=0)
+    normalized = projection / (projection.max() or 1)
+    valley_mask = normalized < 0.2
+
+    splits = []
+    start = 0
+    for i in range(1, len(valley_mask)):
+        if valley_mask[i - 1] and not valley_mask[i]:
+            splits.append(i)
+    subregions = []
+    prev = 0
+    for split in splits:
+        if split - prev > width_threshold:
+            subregions.append(region[:, prev:split])
+        prev = split
+    if region.shape[1] - prev > width_threshold:
+        subregions.append(region[:, prev:])
+
+    return subregions if subregions else [region]
+
+
 def segment_characters(license_plate):
     """
     Segment characters from the detected license plate. Draw bounding boxes around each character
@@ -178,11 +204,11 @@ def segment_characters(license_plate):
     """
 
     # remove small bright artifacts (e.g. screws) by applying a morphological opening
-    cleaned_plate = morphology.opening(license_plate, morphology.disk(3))
-    labelled_plate = measure.label(cleaned_plate)
+    # cleaned_plate = morphology.opening(license_plate, morphology.disk(2.2))
+    labelled_plate = measure.label(license_plate)
 
     fig, ax1 = plt.subplots(1)
-    ax1.imshow(cleaned_plate, cmap="gray")
+    ax1.imshow(license_plate, cmap="gray")
     # the next two lines is based on the assumptions that the width of
     # a characters should be between 5% and 15% of the license plate,
     # and height should be between 35% and 75%
@@ -209,7 +235,7 @@ def segment_characters(license_plate):
             and region_height < max_height
             and region_width > min_width
             and region_width < max_width
-        ): 
+        ):
             pad_y = max(1, int(0.15 * region_height)) # add padding to the character region
             pad_x = max(1, int(0.2 * region_width)) 
             y0_pad = max(0, y0 - pad_y) 
@@ -218,23 +244,26 @@ def segment_characters(license_plate):
             x1_pad = min(license_plate.shape[1], x1 + pad_x)
             roi = license_plate[y0_pad:y1_pad, x0_pad:x1_pad] # region of interest
 
-            # draw a red bordered rectangle over the character.
-            rect_border = patches.Rectangle(
-                (x0_pad, y0_pad),
-                x1_pad - x0_pad,
-                y1_pad - y0_pad,
-                edgecolor="red",
-                linewidth=2,
-                fill=False,
-            )
-            ax1.add_patch(rect_border)
+            sub_regions = [roi]
+            if (x1_pad - x0_pad) > (0.12 * license_plate.shape[1]):
+                sub_regions = _split_wide_region(roi, width_threshold=int(0.03 * license_plate.shape[1]))
 
-            # resize the characters to 20X20 and then append each character into the characters list
-            resized_char = resize(roi, (40, 40))
-            characters.append(resized_char)
+            for idx, sub_roi in enumerate(sub_regions):
+                sub_width = sub_roi.shape[1]
+                sub_offset = x0_pad if idx == 0 else x0_pad + sum(sr.shape[1] for sr in sub_regions[:idx])
+                rect_border = patches.Rectangle(
+                    (sub_offset, y0_pad),
+                    sub_width,
+                    y1_pad - y0_pad,
+                    edgecolor="red",
+                    linewidth=2,
+                    fill=False,
+                )
+                ax1.add_patch(rect_border)
 
-            # this is just to keep track of the arrangement of the characters
-            column_list.append(x0)
+                resized_char = resize(sub_roi, (40, 40))
+                characters.append(resized_char)
+                column_list.append(sub_offset)
             
     return characters, column_list
     # plt.show()
