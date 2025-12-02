@@ -168,10 +168,26 @@ def select_plate_using_vertical_projection(plate_like_objects):
             best_score = score
             best_plate = inverted_candidate
 
-    return best_plate
+    return enhance_plate_resolution(best_plate)
 
 
-def _split_wide_region(region, width_threshold):
+def enhance_plate_resolution(plate, scale_factor=3):
+    """
+    Upscale the binary plate image to improve character segmentation accuracy.
+    """
+    if plate.size == 0 or scale_factor <= 1:
+        return plate
+
+    upscaled = resize(
+        plate.astype(float),
+        (plate.shape[0] * scale_factor, plate.shape[1] * scale_factor),
+        order=1,
+        preserve_range=True,
+    )
+    return (upscaled > 0.5).astype(plate.dtype)
+
+
+def split_wide_region(region, width_threshold):
     """
     If a region is too wide (likely around two characters), split it by finding
     local minima in the vertical projection profile and slicing at those valleys.
@@ -248,7 +264,7 @@ def segment_characters(license_plate):
             # If the region is too wide (>12%), it may contain multiple characters, so split it
             sub_regions = [roi]
             if (x1_pad - x0_pad) > (0.12 * license_plate.shape[1]):
-                sub_regions = _split_wide_region(roi, width_threshold=int(0.03 * license_plate.shape[1]))
+                sub_regions = split_wide_region(roi, width_threshold=int(0.03 * license_plate.shape[1]))
 
             for idx, sub_roi in enumerate(sub_regions):
                 sub_width = sub_roi.shape[1]
