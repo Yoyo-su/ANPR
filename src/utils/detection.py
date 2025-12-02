@@ -204,8 +204,9 @@ def segment_characters(license_plate):
     """
 
     # remove small bright artifacts (e.g. screws) by applying a morphological opening
-    # cleaned_plate = morphology.opening(license_plate, morphology.disk(2.2))
-    labelled_plate = measure.label(license_plate)
+    cleaned_plate = morphology.opening(license_plate, morphology.disk(2.2))
+    labelled_plate = measure.label(cleaned_plate)
+    # labelled_plate = measure.label(license_plate)
 
     fig, ax1 = plt.subplots(1)
     ax1.imshow(license_plate, cmap="gray")
@@ -216,7 +217,7 @@ def segment_characters(license_plate):
     character_dimensions = (
         0.35 * license_plate.shape[0],
         0.75 * license_plate.shape[0],
-        0.03 * license_plate.shape[1],
+        0.02 * license_plate.shape[1],
         0.18 * license_plate.shape[1],
     )
     min_height, max_height, min_width, max_width = character_dimensions
@@ -237,13 +238,14 @@ def segment_characters(license_plate):
             and region_width < max_width
         ):
             pad_y = max(1, int(0.15 * region_height)) # add padding to the character region
-            pad_x = max(1, int(0.2 * region_width)) 
+            pad_x = max(1, int(0.22 * region_width)) 
             y0_pad = max(0, y0 - pad_y) 
             y1_pad = min(license_plate.shape[0], y1 + pad_y)
             x0_pad = max(0, x0 - pad_x)
             x1_pad = min(license_plate.shape[1], x1 + pad_x)
             roi = license_plate[y0_pad:y1_pad, x0_pad:x1_pad] # region of interest
 
+            # If the region is too wide (>12%), it may contain multiple characters, so split it
             sub_regions = [roi]
             if (x1_pad - x0_pad) > (0.12 * license_plate.shape[1]):
                 sub_regions = _split_wide_region(roi, width_threshold=int(0.03 * license_plate.shape[1]))
