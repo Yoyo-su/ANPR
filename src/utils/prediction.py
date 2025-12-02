@@ -1,5 +1,6 @@
 import os
 import joblib
+import numpy as np
 from skimage.filters import threshold_otsu
 from skimage.feature import hog
 
@@ -72,22 +73,40 @@ def prepare_character_image(char_img):
     return features.reshape(1, -1)
 
 
-def enforce_plate_pattern(plate_string):
-    
-    if len(plate_string) == len(PLATE_PATTERN_IN):
-        PLATE_PATTERN = PLATE_PATTERN_IN
-    elif len(plate_string) == len(PLATE_PATTERN_UK):
-        PLATE_PATTERN = PLATE_PATTERN_UK
+def best_label_for_expected_type(probabilities, classes, expected):
+    " Find the best label matching the expected type (digit or alpha) based on probabilities."
+    if expected not in {"digit", "alpha"}:
+        return None
+    candidates = []
+    for idx, label in enumerate(classes):
+        if expected == "digit" and label.isdigit():
+            candidates.append((probabilities[idx], label))
+        elif expected == "alpha" and label.isalpha():
+            candidates.append((probabilities[idx], label))
+    if not candidates:
+        return None
+    return max(candidates)[1]
+
+
+def enforce_plate_pattern(labels, probabilities, classes):
+    " Adjust the predicted labels to conform to known license plate patterns. "
+    if len(labels) == len(PLATE_PATTERN_IN):
+        pattern = PLATE_PATTERN_IN
+    elif len(labels) == len(PLATE_PATTERN_UK):
+        pattern = PLATE_PATTERN_UK
     else:
-        return plate_string
-    chars = list(plate_string)
-    for idx, expected in enumerate(PLATE_PATTERN):
-        ch = chars[idx]
+        return "".join(labels)
+
+    adjusted = list(labels)
+    for idx, expected in enumerate(pattern):
+        ch = adjusted[idx]
         if expected == "digit" and not ch.isdigit():
-            chars[idx] = LETTER_TO_DIGIT.get(ch.upper(), ch)
+            replacement = best_label_for_expected_type(probabilities[idx], classes, "digit")
+            adjusted[idx] = replacement or LETTER_TO_DIGIT.get(ch.upper(), ch)
         elif expected == "alpha" and not ch.isalpha():
-            chars[idx] = DIGIT_TO_LETTER.get(ch, ch)
-    return "".join(chars)
+            replacement = best_label_for_expected_type(probabilities[idx], classes, "alpha")
+            adjusted[idx] = replacement or DIGIT_TO_LETTER.get(ch, ch)
+    return "".join(adjusted)
 
 
 def predict_characters(characters, column_list):
@@ -97,10 +116,13 @@ def predict_characters(characters, column_list):
     model = joblib.load(model_dir)
 
     classification_result = []
+    probabilities = []
     for each_character in characters:
         feature_vector = prepare_character_image(each_character)
-        result = model.predict(feature_vector)
-        classification_result.append(result[0])
+        probas = model.predict_proba(feature_vector)[0]
+        best_index = int(np.argmax(probas))
+        classification_result.append(model.classes_[best_index])
+        probabilities.append(probas)
 
     print(classification_result)
 
@@ -111,14 +133,15 @@ def predict_characters(characters, column_list):
     # since that's a possibility, the column_list will be
     # used to sort the letters in the right order
 
-    column_list_copy = column_list[:]
-    sorted_columns = sorted(column_list)
-    rightplate_string = ''
-    for each in sorted_columns:
-        rightplate_string += plate_string[column_list_copy.index(each)]
+    combined = list(zip(column_list, classification_result, probabilities))
+    combined.sort(key=lambda item: item[0])
+    sorted_columns = [item[0] for item in combined]
+    sorted_labels = [item[1] for item in combined]
+    sorted_probabilities = [item[2] for item in combined]
+    rightplate_string = ''.join(sorted_labels)
 
     print(rightplate_string)
 
-    post_processed = enforce_plate_pattern(rightplate_string)
+    post_processed = enforce_plate_pattern(sorted_labels, sorted_probabilities, model.classes_)
     if post_processed != rightplate_string:
         print(f"Pattern-adjusted plate: {post_processed}")
