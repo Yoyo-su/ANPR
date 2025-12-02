@@ -30,7 +30,7 @@ DIGIT_TO_LETTER = {
     "9": "P",
 }
 
-PLATE_PATTERN = [
+PLATE_PATTERN_IE = [
     "alpha",
     "alpha",
     "digit",
@@ -43,6 +43,15 @@ PLATE_PATTERN = [
     "digit",
 ]
 
+PLATE_PATTERN_UK = [
+    "alpha",
+    "alpha",
+    "digit",
+    "digit",
+    "alpha",
+    "alpha",
+    "alpha",
+]
 
 def prepare_character_image(char_img):
     """
@@ -64,9 +73,13 @@ def prepare_character_image(char_img):
 
 
 def enforce_plate_pattern(plate_string):
-    if len(plate_string) != len(PLATE_PATTERN):
+    
+    if len(plate_string) == len(PLATE_PATTERN_IE):
+        PLATE_PATTERN = PLATE_PATTERN_IE
+    elif len(plate_string) == len(PLATE_PATTERN_UK):
+        PLATE_PATTERN = PLATE_PATTERN_UK
+    else:
         return plate_string
-
     chars = list(plate_string)
     for idx, expected in enumerate(PLATE_PATTERN):
         ch = chars[idx]
