@@ -30,7 +30,7 @@ DIGIT_TO_LETTER = {
     "9": "P",
 }
 
-PLATE_PATTERN_IE = [
+PLATE_PATTERN_IN = [
     "alpha",
     "alpha",
     "digit",
@@ -74,8 +74,8 @@ def prepare_character_image(char_img):
 
 def enforce_plate_pattern(plate_string):
     
-    if len(plate_string) == len(PLATE_PATTERN_IE):
-        PLATE_PATTERN = PLATE_PATTERN_IE
+    if len(plate_string) == len(PLATE_PATTERN_IN):
+        PLATE_PATTERN = PLATE_PATTERN_IN
     elif len(plate_string) == len(PLATE_PATTERN_UK):
         PLATE_PATTERN = PLATE_PATTERN_UK
     else:
